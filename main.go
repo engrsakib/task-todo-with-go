@@ -9,8 +9,17 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "Hello, World!")
+		fmt.Fprintln(w, "Hello, Sakib!")
 	})
 
-	http.ListenAndServe(":8080", mux)
+	mux.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "OK")
+	})
+
+	fmt.Println("Starting server on :8080")
+
+	err := http.ListenAndServe(":8080", mux)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+	}
 }
