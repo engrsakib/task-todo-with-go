@@ -10,7 +10,7 @@ func AuthRoutes(r *gin.Engine) {
 	authGroup := r.Group("/api/auth")
 	{
 		authGroup.POST("/register", controllers.RegisterUser)
-		// পরে আমরা এখানে লগইন এবং ভেরিফাই রাউট যোগ করব
+		authGroup.POST("/resend-otp", controllers.ResendOTP)
 		// authGroup.POST("/login", controllers.LoginUser)
 		// authGroup.POST("/verify", controllers.VerifyOTP)
 	}

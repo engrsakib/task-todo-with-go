@@ -3,49 +3,69 @@ package utils
 import (
 	"errors"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// টোকেনের সিক্রেট কি (Environment Variable থেকে নিবে)
 var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 
-// CustomClaims - টোকেনের ভেতর আমরা কি কি তথ্য রাখব
-type Claims struct {
+
+type SignedDetails struct {
 	UserID string `json:"userId"`
+	Name   string `json:"name"`
+	Email  string `json:"email"`
 	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken - লগইন করার পর ইউজারকে এই টোকেন দেওয়া হবে
-func GenerateToken(userId string, role string) (string, error) {
-	// যদি .env লোড না হয়ে থাকে, তবে ক্র্যাশ এড়াতে চেক
-	if len(jwtSecret) == 0 {
-		jwtSecret = []byte("DEFAULT_SECRET_IF_ENV_MISSING") 
-	}
 
-	// টোকেনের মেয়াদ ১ দিন (24 Hours)
-	expirationTime := time.Now().Add(24 * time.Hour)
+func GenerateTokens(userId string, name string, email string, role string) (string, string, error) {
+	// ১. .env থেকে মেয়াদ লোড করা
+	accessExpiryStr := os.Getenv("ACCESS_TOKEN_EXPIRY_HOUR")
+	refreshExpiryStr := os.Getenv("REFRESH_TOKEN_EXPIRY_DAY")
 
-	claims := &Claims{
+	
+	if accessExpiryStr == "" { accessExpiryStr = "15" }
+	if refreshExpiryStr == "" { refreshExpiryStr = "22" }
+
+	accessHours, _ := strconv.Atoi(accessExpiryStr)
+	refreshDays, _ := strconv.Atoi(refreshExpiryStr)
+
+	
+	accessClaims := &SignedDetails{
 		UserID: userId,
+		Name:   name,
+		Email:  email,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(accessHours) * time.Hour)),
 		},
 	}
+	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(jwtSecret)
+	if err != nil {
+		return "", "", err
+	}
 
-	// টোকেন তৈরি করা
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
+
+	refreshClaims := &SignedDetails{
+		UserID: userId,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(refreshDays) * 24 * time.Hour)),
+		},
+	}
+	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(jwtSecret)
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessToken, refreshToken, nil
 }
 
-// ValidateToken - টোকেন ঠিক আছে কিনা চেক করা
-func ValidateToken(tokenString string) (*Claims, error) {
-	claims := &Claims{}
 
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+func ValidateToken(tokenString string) (*SignedDetails, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &SignedDetails{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecret, nil
 	})
 
@@ -53,7 +73,8 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		return nil, err
 	}
 
-	if !token.Valid {
+	claims, ok := token.Claims.(*SignedDetails)
+	if !ok || !token.Valid {
 		return nil, errors.New("invalid token")
 	}
 
