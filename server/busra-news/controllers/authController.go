@@ -379,3 +379,160 @@ func ResetPassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully! You can login now."})
 }
+
+
+func GetProfile(c *gin.Context) {
+	
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized request"})
+		return
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	
+	objID, err := primitive.ObjectIDFromHex(userId.(string))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+
+	var user models.User
+	err = userCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status": true,
+		"data": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+			"verified": user.Verified,
+			"joined_at": user.CreatedAt,
+		},
+	})
+}
+
+
+
+func ChangePassword(c *gin.Context) {
+	
+	var input struct {
+		CurrentPassword string `json:"currentPassword" binding:"required"`
+		NewPassword     string `json:"newPassword" binding:"required,min=6"`
+		RetypePassword  string `json:"retypePassword" binding:"required,eqfield=NewPassword"` // eqfield চেক করে নিউ 
+	}
+
+	
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	userId, _ := c.Get("userId")
+	
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	
+	objID, _ := primitive.ObjectIDFromHex(userId.(string))
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.CurrentPassword))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
+		return
+	}
+
+
+	hashedNewPassword, _ := bcrypt.GenerateFromPassword([]byte(input.NewPassword), 14)
+
+	
+	update := bson.M{
+		"$set": bson.M{
+			"password":   string(hashedNewPassword),
+			"updated_at": time.Now(),
+		},
+	}
+	_, err = userCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "Password changed successfully!",
+	})
+}
+
+
+func UpdateProfile(c *gin.Context) {
+	var input struct {
+		Name string `json:"name" binding:"required"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	userId, exists := c.Get("userId")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized request"})
+		return
+	}
+
+	objID, _ := primitive.ObjectIDFromHex(userId.(string))
+
+	
+	update := bson.M{
+		"$set": bson.M{
+			"name":       input.Name,
+			"updated_at": time.Now(),
+		},
+	}
+
+	result, err := userCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
+		return
+	}
+
+	
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "Profile updated successfully!",
+		"data": gin.H{
+			"name": input.Name,
+		},
+	})
+}

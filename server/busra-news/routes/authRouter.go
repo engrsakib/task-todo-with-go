@@ -3,10 +3,11 @@ package routes
 import (
 	"github.com/engrsakib/news-with-go/controllers"
 	"github.com/gin-gonic/gin"
+	"github.com/engrsakib/news-with-go/middleware"
 )
 
 func AuthRoutes(r *gin.Engine) {
-	// অথেন্টিকেশন গ্রুপ
+	
 	authGroup := r.Group("/api/auth")
 	{
 		authGroup.POST("/register", controllers.RegisterUser)
@@ -15,5 +16,7 @@ func AuthRoutes(r *gin.Engine) {
 		authGroup.POST("/verify", controllers.VerifyOTP)
 		authGroup.POST("/forgot-password", controllers.ForgotPassword)
 		authGroup.POST("/reset-password", controllers.ResetPassword)
+		authGroup.GET("/me", middleware.AuthMiddleware(), controllers.GetProfile)
+		authGroup.POST("/change-password", middleware.AuthMiddleware(), controllers.ChangePassword)
 	}
 }
