@@ -75,18 +75,14 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	// সফল রেসপন্স
+	
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully! Please check your email for OTP.",
 		"userId":  user.ID,
 	})
 }
 
-// ---------------------------------------------------------
-// হেল্পার ফাংশন (Helper Functions)
-// ---------------------------------------------------------
 
-// generateOTP - ৪ সংখ্যার র‍্যান্ডম কোড বানাবে
 func generateOTP() string {
 	rand.Seed(time.Now().UnixNano())
 	min := 1000
@@ -94,7 +90,7 @@ func generateOTP() string {
 	return strconv.Itoa(rand.Intn(max-min+1) + min)
 }
 
-// sendOTPEmail - ইমেইল পাঠানোর লজিক
+
 func sendOTPEmail(toEmail string, otp string) error {
 	// .env থেকে ইমেইল ক্রেডেনশিয়াল নেওয়া
 	smtpHost := os.Getenv("SMTP_HOST")
@@ -126,4 +122,53 @@ func sendOTPEmail(toEmail string, otp string) error {
 	}
 	
 	return nil
+}
+
+
+func ResendOTP(c *gin.Context) {
+	var input struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userCollection := config.GetCollection("users")
+
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found with this email"})
+		return
+	}
+
+	
+	if user.Verified {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Account is already verified. Please login."})
+		return
+	}
+
+	newOTP := generateOTP()
+
+	update := bson.M{"$set": bson.M{"otp": newOTP, "updated_at": time.Now()}}
+	_, err = userCollection.UpdateOne(ctx, bson.M{"email": input.Email}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update OTP"})
+		return
+	}
+
+	
+	emailErr := sendOTPEmail(user.Email, newOTP)
+	if emailErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email. Please try again later."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "A new verification code has been sent to your email."})
 }
