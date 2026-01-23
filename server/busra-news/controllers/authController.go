@@ -219,14 +219,14 @@ func LoginUser(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, gin.H{
 		"message":       "Login successful!",
-		"accessToken":   accessToken,
-		"refreshToken":  refreshToken,
 		"user": gin.H{
 			"id":    user.ID,
 			"name":  user.Name,
 			"email": user.Email,
 			"role":  user.Role,
 		},
+		"accessToken":   accessToken,
+		"refreshToken":  refreshToken,
 	})
 }
 
@@ -279,4 +279,103 @@ func VerifyOTP(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Account verified successfully! You can login now."})
+}
+
+
+
+
+
+func ForgotPassword(c *gin.Context) {
+	var input struct {
+		Email string `json:"email" binding:"required,email"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	// ১. ইনপুট চেক
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// ২. ইউজার আছে কিনা দেখা
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found with this email"})
+		return
+	}
+
+	// ৩. নতুন OTP তৈরি এবং সেভ করা
+	otp := generateOTP()
+	update := bson.M{"$set": bson.M{"otp": otp, "updated_at": time.Now()}}
+	
+	_, err = userCollection.UpdateOne(ctx, bson.M{"email": input.Email}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate OTP"})
+		return
+	}
+
+	// ৪. ইমেইল পাঠানো
+	sendErr := sendOTPEmail(user.Email, otp)
+	if sendErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset OTP sent to your email."})
+}
+
+func ResetPassword(c *gin.Context) {
+	var input struct {
+		Email       string `json:"email" binding:"required,email"`
+		OTP         string `json:"otp" binding:"required"`
+		NewPassword string `json:"newPassword" binding:"required,min=6"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	// ১. ইনপুট চেক
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// ২. ইউজার খুঁজে বের করা
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// ৩. OTP ম্যাচ করছে কিনা দেখা
+	if user.OTP != input.OTP {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP"})
+		return
+	}
+
+	// ৪. নতুন পাসওয়ার্ড হ্যাশ (Hash) করা (খুব জরুরি!)
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.NewPassword), 14)
+
+	// ৫. পাসওয়ার্ড আপডেট করা এবং OTP মুছে ফেলা
+	update := bson.M{
+		"$set": bson.M{
+			"password":   string(hashedPassword),
+			"otp":        "", // কাজ শেষ, তাই OTP মুছে দিলাম
+			"updated_at": time.Now(),
+		},
+	}
+
+	_, err = userCollection.UpdateOne(ctx, bson.M{"email": input.Email}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully! You can login now."})
 }
