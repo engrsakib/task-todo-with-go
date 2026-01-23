@@ -12,6 +12,7 @@ import (
 
 	"github.com/engrsakib/news-with-go/config"
 	"github.com/engrsakib/news-with-go/models"
+	"github.com/engrsakib/news-with-go/utils"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -171,4 +172,111 @@ func ResendOTP(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "A new verification code has been sent to your email."})
+}
+
+func LoginUser(c *gin.Context) {
+	var input struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userCollection := config.GetCollection("users")
+
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	if !user.Verified {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Please verify your email first!"})
+		return
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	accessToken, refreshToken, err := utils.GenerateTokens(user.ID.Hex(), user.Name, user.Email, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		return
+	}
+
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Login successful!",
+		"accessToken":   accessToken,
+		"refreshToken":  refreshToken,
+		"user": gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
+	})
+}
+
+
+func VerifyOTP(c *gin.Context) {
+	var input struct {
+		Email string `json:"email" binding:"required,email"`
+		OTP   string `json:"otp" binding:"required"`
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userCollection := config.GetCollection("users")
+
+	// ১. ইনপুট চেক
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// ২. ডাটাবেসে ইউজার খোঁজা
+	var user models.User
+	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	
+	if user.Verified {
+		c.JSON(http.StatusOK, gin.H{"message": "Account is already verified"})
+		return
+	}
+
+	
+	if user.OTP != input.OTP {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP provided"})
+		return
+	}
+
+	
+	update := bson.M{
+		"$set": bson.M{"verified": true, "otp": ""},
+	}
+	_, err = userCollection.UpdateOne(ctx, bson.M{"email": input.Email}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Account verified successfully! You can login now."})
 }
