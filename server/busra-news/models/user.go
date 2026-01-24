@@ -11,7 +11,8 @@ type User struct {
 	Name      string             `bson:"name" json:"name" binding:"required"`
 	Email     string             `bson:"email" json:"email" binding:"required,email"`
 	Password  string             `bson:"password" json:"password" binding:"required,min=6"`            
-	Role      string             `bson:"role" json:"role"`             
+	Role      string             `bson:"role" json:"role"`    
+	Is_Deleted bool               `bson:"is_deleted" json:"is_deleted"`         
 	Verified  bool               `bson:"verified" json:"verified"`     
 	OTP       string             `bson:"otp,omitempty" json:"-"`       
 	CreatedAt time.Time          `bson:"created_at" json:"created_at"`

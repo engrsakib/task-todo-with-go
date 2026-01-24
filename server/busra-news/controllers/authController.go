@@ -52,6 +52,7 @@ func RegisterUser(c *gin.Context) {
 	user.CreatedAt = time.Now()
 	user.UpdatedAt = time.Now()
 	user.Verified = false
+	user.Is_Deleted = false
 	user.Role = "USER" 
 
 	otp := generateOTP()
@@ -196,6 +197,11 @@ func LoginUser(c *gin.Context) {
 	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
+		return
+	}
+
+	if user.Is_Deleted {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been deactivated. Please contact support."})
 		return
 	}
 
@@ -555,5 +561,76 @@ func UpdateUser(c *gin.Context) {
 			"updatedId": updateID,
 			"name":      input.Name,
 		},
+	})
+}
+
+func AdminUpdateUser(c *gin.Context) {
+	
+	var input struct {
+		TargetUserID string `json:"targetUserId" binding:"required"` 
+		Role         string `json:"role"`         
+		Verified     *bool  `json:"verified"`     
+		NewPassword  string `json:"newPassword"`  
+	}
+
+	
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+
+	updateFields := bson.M{"updated_at": time.Now()}
+
+	// --- [Case A: Role Change] ---
+	if input.Role != "" {
+		updateFields["role"] = input.Role
+	}
+
+	// --- [Case B: Verify On/Off] ---
+	
+	if input.Verified != nil {
+		updateFields["verified"] = *input.Verified
+		
+		
+		if *input.Verified {
+			updateFields["otp"] = "" 
+		}
+	}
+
+	// --- [Case C: Password Reset] ---
+	if input.NewPassword != "" {
+		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.NewPassword), 14)
+		updateFields["password"] = string(hashedPassword)
+	}
+
+	
+	objID, err := primitive.ObjectIDFromHex(input.TargetUserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		return
+	}
+
+	update := bson.M{"$set": updateFields}
+
+	result, err := userCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
+		return
+	}
+	
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "User updated successfully by Admin!",
+		"updated_fields": updateFields, 
 	})
 }

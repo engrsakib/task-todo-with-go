@@ -19,5 +19,6 @@ func AuthRoutes(r *gin.Engine) {
 		authGroup.GET("/me", middleware.AuthMiddleware(), controllers.GetProfile)
 		authGroup.POST("/change-password", middleware.AuthMiddleware(), controllers.ChangePassword)
 		authGroup.PATCH("/update-profile", middleware.AuthMiddleware(), controllers.UpdateUser)
+		authGroup.PATCH("/admin/update-user", middleware.AuthMiddleware(), middleware.RoleMiddleware("admin"), controllers.AdminUpdateUser)
 	}
 }
