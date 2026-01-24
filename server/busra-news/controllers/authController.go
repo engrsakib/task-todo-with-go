@@ -484,14 +484,14 @@ func ChangePassword(c *gin.Context) {
 }
 
 
-func UpdateProfile(c *gin.Context) {
-	var input struct {
-		Name string `json:"name" binding:"required"`
-	}
 
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	userCollection := config.GetCollection("users")
+
+func UpdateUser(c *gin.Context) {
+	// ইনপুট স্ট্রাকচার
+	var input struct {
+		TargetUserID string `json:"targetUserId"` 
+		Name         string `json:"name" binding:"required"`
+	}
 
 	
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -500,13 +500,34 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	
-	userId, exists := c.Get("userId")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized request"})
-		return
+	requesterID, _ := c.Get("userId")
+	requesterRole, _ := c.Get("role")
+
+	
+	updateID := requesterID.(string) 
+
+	
+	if input.TargetUserID != "" {
+		
+		if requesterRole == "ADMIN" {
+			updateID = input.TargetUserID 
+		} else {
+		
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only Admins can update other users"})
+			return
+		}
 	}
 
-	objID, _ := primitive.ObjectIDFromHex(userId.(string))
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	
+	objID, err := primitive.ObjectIDFromHex(updateID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		return
+	}
 
 	
 	update := bson.M{
@@ -522,7 +543,6 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	
 	if result.MatchedCount == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
@@ -532,7 +552,8 @@ func UpdateProfile(c *gin.Context) {
 		"status":  true,
 		"message": "Profile updated successfully!",
 		"data": gin.H{
-			"name": input.Name,
+			"updatedId": updateID,
+			"name":      input.Name,
 		},
 	})
 }
