@@ -493,7 +493,7 @@ func ChangePassword(c *gin.Context) {
 
 
 func UpdateUser(c *gin.Context) {
-	// ইনপুট স্ট্রাকচার
+	
 	var input struct {
 		TargetUserID string `json:"targetUserId"` 
 		Name         string `json:"name" binding:"required"`
@@ -632,5 +632,55 @@ func AdminUpdateUser(c *gin.Context) {
 		"status":  true,
 		"message": "User updated successfully by Admin!",
 		"updated_fields": updateFields, 
+	})
+}
+
+
+
+func DeleteUser(c *gin.Context) {
+	
+	targetUserID := c.Param("id")
+
+	
+	requesterID, _ := c.Get("userId")
+	requesterRole, _ := c.Get("role")
+
+	if requesterRole != "ADMIN" && requesterID.(string) != targetUserID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to delete this account"})
+		return
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	userCollection := config.GetCollection("users")
+
+	objID, err := primitive.ObjectIDFromHex(targetUserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid User ID"})
+		return
+	}
+
+	
+	update := bson.M{
+		"$set": bson.M{
+			"is_deleted": true,
+			"updated_at": time.Now(),
+		},
+	}
+
+	result, err := userCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "User account deactivated successfully",
 	})
 }

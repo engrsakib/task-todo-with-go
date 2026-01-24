@@ -20,5 +20,6 @@ func AuthRoutes(r *gin.Engine) {
 		authGroup.POST("/change-password", middleware.AuthMiddleware(), controllers.ChangePassword)
 		authGroup.PATCH("/update-profile", middleware.AuthMiddleware(), controllers.UpdateUser)
 		authGroup.PATCH("/admin/update-user", middleware.AuthMiddleware(), middleware.RoleMiddleware("admin"), controllers.AdminUpdateUser)
+		authGroup.DELETE("/admin/delete-user/:id", middleware.AuthMiddleware(), middleware.RoleMiddleware("admin"), controllers.DeleteUser)
 	}
 }
