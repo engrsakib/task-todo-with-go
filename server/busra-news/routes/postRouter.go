@@ -23,5 +23,6 @@ func PostRoutes(r *gin.Engine) {
 		authGroup.POST("/create", controllers.CreatePost)
 		authGroup.PATCH("/status/:id", controllers.ChangePostStatus)
 		authGroup.PUT("/update/:id", controllers.EditPost) 
+		authGroup.DELETE("/:id", controllers.DeletePost)
 	}
 }

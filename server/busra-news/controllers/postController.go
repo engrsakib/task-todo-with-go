@@ -426,3 +426,58 @@ func ChangePostStatus(c *gin.Context) {
 		"message": "Post status changed to " + input.Status,
 	})
 }
+
+
+
+func DeletePost(c *gin.Context) {
+	
+	postID := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Post ID"})
+		return
+	}
+
+	
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCollection := config.GetCollection("posts")
+
+	
+	var existingPost models.Post
+	err = postCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&existingPost)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+		return
+	}
+
+	
+	userID, _ := c.Get("userId")
+	userRole, _ := c.Get("role")
+
+
+	if userRole != "ADMIN" && existingPost.WriterID.Hex() != userID.(string) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to delete this post"})
+		return
+	}
+
+	// ৫. সফট ডিলিট করা (is_deleted = true)
+	update := bson.M{
+		"$set": bson.M{
+			"is_deleted": true,
+			"status":     "deleted", 
+			"updated_at": time.Now(),
+		},
+	}
+
+	_, err = postCollection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete post"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "Post deleted successfully",
+	})
+}
