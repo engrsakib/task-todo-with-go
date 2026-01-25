@@ -37,6 +37,7 @@ func main() {
 	
 	routes.AuthRoutes(r)
 	routes.PostRoutes(r)
+	routes.CommentRoutes(r)
 
 	
 	port := os.Getenv("PORT")
