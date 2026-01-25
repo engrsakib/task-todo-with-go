@@ -341,3 +341,88 @@ func GetPostBySlug(c *gin.Context) {
 		"data":   post,
 	})
 }
+
+
+
+func ChangePostStatus(c *gin.Context) {
+	
+	postID := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Post ID"})
+		return
+	}
+
+	
+	var input struct {
+		Status       string     `json:"status" binding:"required"` // বাধ্যতামূলক
+		ScheduleTime *time.Time `json:"schedule_time"`             // অপশনাল
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCollection := config.GetCollection("posts")
+
+	var existingPost models.Post
+	err = postCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&existingPost)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+		return
+	}
+
+	
+	userID, _ := c.Get("userId")
+	userRole, _ := c.Get("role")
+
+	
+	if userRole != "ADMIN" && existingPost.WriterID.Hex() != userID.(string) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to change status of this post"})
+		return
+	}
+
+	
+	updateFields := bson.M{
+		"status":     input.Status,
+		"updated_at": time.Now(),
+	}
+
+	
+	switch input.Status {
+	case "publish":
+		now := time.Now()
+		updateFields["published_at"] = now
+		updateFields["schedule_time"] = nil 
+
+	case "schedule":
+		if input.ScheduleTime != nil {
+			updateFields["schedule_time"] = input.ScheduleTime
+			updateFields["published_at"] = nil 
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Schedule time is required"})
+			return
+		}
+
+	case "draft":
+		
+		updateFields["published_at"] = nil
+		updateFields["schedule_time"] = nil
+	}
+
+	
+	_, err = postCollection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": updateFields})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "Post status changed to " + input.Status,
+	})
+}

@@ -13,7 +13,7 @@ func PostRoutes(r *gin.Engine) {
 	{
 		postGroup.GET("/", controllers.GetAllPosts)        
 		postGroup.GET("/:slug", controllers.GetPostBySlug) 
-		
+
 	}
 
 
@@ -21,8 +21,7 @@ func PostRoutes(r *gin.Engine) {
 	authGroup.Use(middleware.AuthMiddleware())
 	{
 		authGroup.POST("/create", controllers.CreatePost)
-		
-		
+		authGroup.PATCH("/status/:id", controllers.ChangePostStatus)
 		authGroup.PUT("/update/:id", controllers.EditPost) 
 	}
 }
