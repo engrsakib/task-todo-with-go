@@ -107,6 +107,103 @@ func CreatePost(c *gin.Context) {
 }
 
 
+func EditPost(c *gin.Context) {
+	
+	postID := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Post ID"})
+		return
+	}
+
+	
+	var input struct {
+		Title        string     `json:"title"`
+		Slug         string     `json:"slug"`
+		Description  string     `json:"description"`
+		Tags         []string   `json:"tags"`
+		Status       string     `json:"status"`
+		ScheduleTime *time.Time `json:"schedule_time"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCollection := config.GetCollection("posts")
+
+	var existingPost models.Post
+	err = postCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&existingPost)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+		return
+	}
+
+	userID, _ := c.Get("userId")
+	userRole, _ := c.Get("role")
+
+	
+	if userRole != "ADMIN" && existingPost.WriterID.Hex() != userID.(string) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to edit this post"})
+		return
+	}
+
+	updateFields := bson.M{"updated_at": time.Now()}
+
+	if input.Title != "" {
+		updateFields["title"] = input.Title
+	}
+	if input.Description != "" {
+		updateFields["description"] = input.Description
+	}
+	if input.Tags != nil {
+		updateFields["tags"] = input.Tags
+	}
+
+	
+	if input.Slug != "" && input.Slug != existingPost.Slug {
+		
+		updateFields["slug"] = getUniqueSlug(ctx, postCollection, input.Slug)
+	}
+
+
+	if input.Status != "" {
+		updateFields["status"] = input.Status
+
+		switch input.Status {
+		case "publish":
+			now := time.Now()
+			updateFields["published_at"] = now
+
+		case "schedule":
+			if input.ScheduleTime != nil {
+				updateFields["schedule_time"] = input.ScheduleTime
+			} else if existingPost.ScheduleTime == nil {
+				
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Schedule time is required"})
+				return
+			}
+		}
+	}
+
+	
+	_, err = postCollection.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": updateFields})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update post"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  true,
+		"message": "Post updated successfully",
+		"updated_fields": updateFields,
+	})
+}
+
 func getUniqueSlug(ctx context.Context, collection *mongo.Collection, text string) string {
 	
 	
