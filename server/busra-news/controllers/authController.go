@@ -364,13 +364,13 @@ func ResetPassword(c *gin.Context) {
 	defer cancel()
 	userCollection := config.GetCollection("users")
 
-	// ১. ইনপুট চেক
+	
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// ২. ইউজার খুঁজে বের করা
+	
 	var user models.User
 	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
 	if err != nil {
@@ -378,20 +378,20 @@ func ResetPassword(c *gin.Context) {
 		return
 	}
 
-	// ৩. OTP ম্যাচ করছে কিনা দেখা
+
 	if user.OTP != input.OTP {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid OTP"})
 		return
 	}
 
-	// ৪. নতুন পাসওয়ার্ড হ্যাশ (Hash) করা (খুব জরুরি!)
+
 	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(input.NewPassword), 14)
 
-	// ৫. পাসওয়ার্ড আপডেট করা এবং OTP মুছে ফেলা
+
 	update := bson.M{
 		"$set": bson.M{
 			"password":   string(hashedPassword),
-			"otp":        "", // কাজ শেষ, তাই OTP মুছে দিলাম
+			"otp":        "", 
 			"updated_at": time.Now(),
 		},
 	}
@@ -707,58 +707,55 @@ func DeleteUser(c *gin.Context) {
 
 
 func RefreshToken(c *gin.Context) {
-	
-	var input struct {
-		RefreshToken string `json:"refresh_token" binding:"required"`
-	}
+    
+    var input struct {
+        RefreshToken string `json:"refresh_token" binding:"required"`
+    }
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
 
-	
-	token, err := jwt.Parse(input.RefreshToken, func(token *jwt.Token) (interface{}, error) {
-		
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		
-		return []byte(os.Getenv("REFRESH_SECRET")), nil
-	})
+    
+    token, err := jwt.Parse(input.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+        }
+        return []byte(os.Getenv("REFRESH_SECRET")), nil
+    })
 
-	if err != nil || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
-		return
-	}
+    if err != nil || !token.Valid {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
+        return
+    }
 
-	
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-		return
-	}
+    
+    claims, ok := token.Claims.(jwt.MapClaims)
+    if !ok || !token.Valid {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+        return
+    }
 
-	
-	userID := claims["user_id"].(string)
-	role := claims["role"].(string) 
+    userID := claims["user_id"].(string)
+    role := claims["role"].(string)
 
-	
-	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"exp":     time.Now().Add(time.Hour * 1).Unix(), 
-	})
+   
+    newAccessToken, err := utils.GenerateToken(userID, role, os.Getenv("JWT_SECRET"), time.Hour*1)
+    
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
+        return
+    }
 
-	tokenString, err := newToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
-		return
-	}
+  
+    response := struct {
+        Status      bool   `json:"status"`
+        AccessToken string `json:"access_token"`
+    }{
+        Status:      true,
+        AccessToken: newAccessToken,
+    }
 
-	// ৫. রেসপন্স পাঠানো
-	c.JSON(http.StatusOK, gin.H{
-		"status":       true,
-		"access_token": tokenString,
-	})
+    c.JSON(http.StatusOK, response)
 }
