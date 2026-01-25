@@ -14,6 +14,7 @@ import (
 	"github.com/engrsakib/news-with-go/models"
 	"github.com/engrsakib/news-with-go/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
@@ -181,18 +182,19 @@ func LoginUser(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 
+	
 	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	userCollection := config.GetCollection("users")
 
-
+	
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-
+	
 	var user models.User
 	err := userCollection.FindOne(ctx, bson.M{"email": input.Email}).Decode(&user)
 	if err != nil {
@@ -200,6 +202,7 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
+	
 	if user.Is_Deleted {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been deactivated. Please contact support."})
 		return
@@ -210,30 +213,40 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
+	
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
-
-	accessToken, refreshToken, err := utils.GenerateTokens(user.ID.Hex(), user.Name, user.Email, user.Role)
+	
+	
+	accessToken, err := utils.GenerateToken(user.ID.Hex(), user.Role, os.Getenv("JWT_SECRET"), time.Hour*1)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
 		return
 	}
 
-	
+	refreshToken, err := utils.GenerateToken(user.ID.Hex(), user.Role, os.Getenv("REFRESH_SECRET"), time.Hour*24*7)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
+		return
+	}
+
+
 	c.JSON(http.StatusOK, gin.H{
-		"message":       "Login successful!",
-		"user": gin.H{
-			"id":    user.ID,
-			"name":  user.Name,
-			"email": user.Email,
-			"role":  user.Role,
-		},
-		"accessToken":   accessToken,
-		"refreshToken":  refreshToken,
-	})
+        "status":        true,                    
+        "message":       "Login successful!",            
+        "user": gin.H{
+            "id":    user.ID,
+            "name":  user.Name,
+            "email": user.Email,
+            "role":  user.Role,
+        },
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+    })
+	
 }
 
 
@@ -682,5 +695,64 @@ func DeleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  true,
 		"message": "User account deactivated successfully",
+	})
+}
+
+
+
+func RefreshToken(c *gin.Context) {
+	
+	var input struct {
+		RefreshToken string `json:"refresh_token" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	token, err := jwt.Parse(input.RefreshToken, func(token *jwt.Token) (interface{}, error) {
+		
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		
+		return []byte(os.Getenv("REFRESH_SECRET")), nil
+	})
+
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
+		return
+	}
+
+	
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
+	}
+
+	
+	userID := claims["user_id"].(string)
+	role := claims["role"].(string) 
+
+	
+	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userID,
+		"role":    role,
+		"exp":     time.Now().Add(time.Hour * 1).Unix(), 
+	})
+
+	tokenString, err := newToken.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
+		return
+	}
+
+	// ৫. রেসপন্স পাঠানো
+	c.JSON(http.StatusOK, gin.H{
+		"status":       true,
+		"access_token": tokenString,
 	})
 }
