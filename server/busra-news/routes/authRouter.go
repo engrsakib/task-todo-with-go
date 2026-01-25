@@ -12,7 +12,7 @@ func AuthRoutes(r *gin.Engine) {
 	{
 		authGroup.POST("/register", controllers.RegisterUser)
 		authGroup.POST("/resend-otp", controllers.ResendOTP)
-		authGroup.POST("/login", controllers.LoginUser)
+		authGroup.POST("/login", controllers.LoginAsUser)
 		authGroup.POST("/verify", controllers.VerifyOTP)
 		authGroup.POST("/forgot-password", controllers.ForgotPassword)
 		authGroup.POST("/reset-password", controllers.ResetPassword)

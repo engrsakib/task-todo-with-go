@@ -176,7 +176,7 @@ func ResendOTP(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "A new verification code has been sent to your email."})
 }
 
-func LoginUser(c *gin.Context) {
+func LoginAsUser(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email" binding:"required,email"`
 		Password string `json:"password" binding:"required"`
@@ -234,18 +234,27 @@ func LoginUser(c *gin.Context) {
 	}
 
 
-	c.JSON(http.StatusOK, gin.H{
-        "status":        true,                    
-        "message":       "Login successful!",            
-        "user": gin.H{
-            "id":    user.ID,
-            "name":  user.Name,
-            "email": user.Email,
-            "role":  user.Role,
-        },
-		"access_token":  accessToken,
-		"refresh_token": refreshToken,
-    })
+	response := struct {
+    Status       bool                   `json:"status"`
+    Message      string                 `json:"message"`
+    User         map[string]interface{} `json:"user"`
+    AccessToken  string                 `json:"access_token"`
+    RefreshToken string                 `json:"refresh_token"`
+}{
+    
+    Status:  true,
+    Message: "Login successful!",
+    User: gin.H{
+        "id":    user.ID,
+        "name":  user.Name,
+        "email": user.Email,
+        "role":  user.Role,
+    },
+    AccessToken:  accessToken,
+    RefreshToken: refreshToken,
+}
+
+c.JSON(http.StatusOK, response)
 	
 }
 
@@ -299,9 +308,6 @@ func VerifyOTP(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Account verified successfully! You can login now."})
 }
-
-
-
 
 
 func ForgotPassword(c *gin.Context) {
