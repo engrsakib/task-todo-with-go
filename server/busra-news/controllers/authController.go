@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"strings"
 
 	"github.com/engrsakib/news-with-go/config"
 	"github.com/engrsakib/news-with-go/models"
@@ -707,55 +708,59 @@ func DeleteUser(c *gin.Context) {
 
 
 func RefreshToken(c *gin.Context) {
-    
-    var input struct {
-        RefreshToken string `json:"refresh_token" binding:"required"`
-    }
+	
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header is required"})
+		return
+	}
 
-    if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-        return
-    }
+	
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header format must be Bearer {token}"})
+		return
+	}
+	refreshTokenString := parts[1] 
 
-    
-    token, err := jwt.Parse(input.RefreshToken, func(token *jwt.Token) (interface{}, error) {
-        if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-            return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-        }
-        return []byte(os.Getenv("REFRESH_SECRET")), nil
-    })
+	
+	token, err := jwt.Parse(refreshTokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("REFRESH_SECRET")), nil
+	})
 
-    if err != nil || !token.Valid {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
-        return
-    }
+	if err != nil || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
+		return
+	}
 
-    
-    claims, ok := token.Claims.(jwt.MapClaims)
-    if !ok || !token.Valid {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-        return
-    }
+	
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+		return
+	}
 
-    userID := claims["user_id"].(string)
-    role := claims["role"].(string)
+	userID := claims["user_id"].(string)
+	role := claims["role"].(string)
 
-   
-    newAccessToken, err := utils.GenerateToken(userID, role, os.Getenv("JWT_SECRET"), time.Hour*1)
-    
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
-        return
-    }
+	
+	newAccessToken, err := utils.GenerateToken(userID, role, os.Getenv("JWT_SECRET"), time.Hour*1)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
+		return
+	}
 
-  
-    response := struct {
-        Status      bool   `json:"status"`
-        AccessToken string `json:"access_token"`
-    }{
-        Status:      true,
-        AccessToken: newAccessToken,
-    }
+	
+	response := struct {
+		Status      bool   `json:"status"`
+		AccessToken string `json:"access_token"`
+	}{
+		Status:      true,
+		AccessToken: newAccessToken,
+	}
 
-    c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, response)
 }
