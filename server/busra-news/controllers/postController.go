@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
+	"math"
 
 	"github.com/engrsakib/news-with-go/config"
 	"github.com/engrsakib/news-with-go/models"
@@ -14,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 
@@ -230,4 +233,111 @@ func getUniqueSlug(ctx context.Context, collection *mongo.Collection, text strin
 	}
 
 	return slug
+}
+
+
+
+func GetAllPosts(c *gin.Context) {
+	
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "10")
+
+	page, _ := strconv.Atoi(pageStr)
+	limit, _ := strconv.Atoi(limitStr)
+	skip := (page - 1) * limit
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCollection := config.GetCollection("posts")
+
+	
+	filter := bson.M{"is_deleted": false}
+
+	
+	projection := bson.M{
+		"_id":          1,
+		"title":        1,
+		"slug":         1,
+		"status":       1,
+		"read_counts":  1,
+		"writer_id":    1, 
+		"tags":         1,
+		"published_at": 1,
+		"created_at":   1,
+		// "description": 0, 
+		// "comments": 0,    
+	}
+
+	
+	findOptions := options.Find()
+	findOptions.SetProjection(projection)
+	findOptions.SetLimit(int64(limit))
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetSort(bson.M{"created_at": -1}) 
+
+	
+	var posts []bson.M 
+	cursor, err := postCollection.Find(ctx, filter, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching posts"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	if err = cursor.All(ctx, &posts); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding posts"})
+		return
+	}
+
+	total, _ := postCollection.CountDocuments(ctx, filter)
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": true,
+		"data":   posts,
+		"pagination": gin.H{
+			"current_page": page,
+			"limit":        limit,
+			"total_posts":  total,
+			"total_pages":  int(math.Ceil(float64(total) / float64(limit))),
+		},
+	})
+}
+
+
+
+func GetPostBySlug(c *gin.Context) {
+	
+	slug := c.Param("slug")
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	postCollection := config.GetCollection("posts")
+
+	
+	filter := bson.M{"slug": slug, "is_deleted": false}
+	
+	
+	update := bson.M{"$inc": bson.M{"read_counts": 1}}
+	
+	
+	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
+
+	var post models.Post
+	err := postCollection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&post)
+
+	if err != nil {
+		
+		if err == mongo.ErrNoDocuments {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Post not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching post"})
+		return
+	}
+
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status": true,
+		"data":   post,
+	})
 }

@@ -14,5 +14,6 @@ func PostRoutes(r *gin.Engine) {
 	{
 		postGroup.POST("/create", middleware.AuthMiddleware(), controllers.CreatePost)
 		postGroup.PATCH("/update/:id", middleware.AuthMiddleware(), controllers.EditPost)
+		postGroup.GET("/", controllers.GetAllPosts)
 	}
 }
