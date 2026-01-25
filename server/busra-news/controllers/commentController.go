@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 
@@ -207,4 +208,98 @@ func DeleteComment(c *gin.Context) {
 		"status":  true,
 		"message": "Comment deleted successfully",
 	})
+}
+
+
+func GetPostComments(c *gin.Context) {
+	postID := c.Param("id")
+	objID, err := primitive.ObjectIDFromHex(postID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Post ID"})
+		return
+	}
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	commentCollection := config.GetCollection("comments")
+
+	
+	pipeline := mongo.Pipeline{
+		
+		bson.D{{Key: "$match", Value: bson.D{
+			{Key: "post_id", Value: objID},
+			{Key: "is_deleted", Value: false},
+		}}},
+		
+		bson.D{{Key: "$lookup", Value: bson.D{
+			{Key: "from", Value: "users"},
+			{Key: "localField", Value: "user_id"},
+			{Key: "foreignField", Value: "_id"},
+			{Key: "as", Value: "user"},
+		}}},
+		
+		bson.D{{Key: "$unwind", Value: "$user"}},
+		
+		bson.D{{Key: "$project", Value: bson.D{
+			{Key: "_id", Value: 1},
+			{Key: "content", Value: 1},
+			{Key: "parent_id", Value: 1},
+			{Key: "created_at", Value: 1},
+			{Key: "user", Value: bson.D{
+				{Key: "_id", Value: "$user._id"},
+				{Key: "name", Value: "$user.name"},
+			}},
+		}}},
+		
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "created_at", Value: 1}}}},
+	}
+
+	cursor, err := commentCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comments"})
+		return
+	}
+
+	
+	type CommentResponse struct {
+		ID        string              `json:"id" bson:"_id"`
+		Content   string              `json:"content" bson:"content"`
+		ParentID  *primitive.ObjectID `json:"parent_id" bson:"parent_id"`
+		CreatedAt time.Time           `json:"created_at" bson:"created_at"`
+		User      struct {
+			ID   string `json:"id" bson:"_id"`
+			Name string `json:"name" bson:"name"`
+		} `json:"user" bson:"user"`
+		Replies []*CommentResponse `json:"replies"` 
+	}
+
+	var allComments []*CommentResponse
+	if err = cursor.All(ctx, &allComments); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding comments"})
+		return
+	}
+
+	
+	commentMap := make(map[string]*CommentResponse)
+	var rootComments []*CommentResponse
+
+	
+	for _, comment := range allComments {
+		comment.Replies = []*CommentResponse{}
+		commentMap[comment.ID] = comment
+	}
+
+	
+	for _, comment := range allComments {
+		if comment.ParentID != nil {
+			parentIDHex := comment.ParentID.Hex()
+			if parent, exists := commentMap[parentIDHex]; exists {
+				parent.Replies = append(parent.Replies, comment)
+			}
+		} else {
+			rootComments = append(rootComments, comment)
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": true, "data": rootComments})
 }
