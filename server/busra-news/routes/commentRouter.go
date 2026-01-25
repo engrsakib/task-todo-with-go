@@ -14,5 +14,7 @@ func CommentRoutes(r *gin.Engine) {
 	{
 		commentGroup.POST("/create", controllers.CreateComment)
 		commentGroup.POST("/create/reply", controllers.CreateComment)
+		commentGroup.PUT("/update/:id", controllers.EditComment)
+		commentGroup.DELETE("/:id", controllers.DeleteComment)
 	}
 }
