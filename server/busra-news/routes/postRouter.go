@@ -10,10 +10,19 @@ func PostRoutes(r *gin.Engine) {
 	
 	postGroup := r.Group("/api/posts")
 
-	
 	{
-		postGroup.POST("/create", middleware.AuthMiddleware(), controllers.CreatePost)
-		postGroup.PATCH("/update/:id", middleware.AuthMiddleware(), controllers.EditPost)
-		postGroup.GET("/", controllers.GetAllPosts)
+		postGroup.GET("/", controllers.GetAllPosts)        
+		postGroup.GET("/:slug", controllers.GetPostBySlug) 
+		
+	}
+
+
+	authGroup := postGroup.Group("/")
+	authGroup.Use(middleware.AuthMiddleware())
+	{
+		authGroup.POST("/create", controllers.CreatePost)
+		
+		
+		authGroup.PUT("/update/:id", controllers.EditPost) 
 	}
 }
