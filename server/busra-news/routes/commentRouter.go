@@ -9,7 +9,7 @@ import (
 func CommentRoutes(r *gin.Engine) {
 	commentGroup := r.Group("/api/comments")
 	
-	
+	commentGroup.GET("/post/:id", controllers.GetPostComments)
 	commentGroup.Use(middleware.AuthMiddleware()) 
 	{
 		commentGroup.POST("/create", controllers.CreateComment)
