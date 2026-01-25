@@ -33,6 +33,7 @@ func AuthRoutes(r *gin.Engine) {
 		admin.Use(middleware.RoleMiddleware("admin"))
 		{
 			admin.PATCH("/update-user", controllers.AdminUpdateUser)
+			admin.GET("/users", controllers.GetAllUsers)
 			
 			admin.DELETE("/delete-user/:id", controllers.DeleteUser)
 		}

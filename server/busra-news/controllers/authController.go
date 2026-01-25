@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 	"strings"
+	"time"
 
 	"github.com/engrsakib/news-with-go/config"
 	"github.com/engrsakib/news-with-go/models"
@@ -18,6 +19,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/gomail.v2"
 )
@@ -763,4 +765,64 @@ func RefreshToken(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+
+func GetAllUsers(c *gin.Context) {
+	
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+
+	
+	skip := (page - 1) * limit
+
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userCollection := config.GetCollection("users")
+
+	
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(limit))
+	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}}) 
+	
+	
+	findOptions.SetProjection(bson.M{"password": 0}) 
+
+	cursor, err := userCollection.Find(ctx, bson.M{"is_deleted": false}, findOptions)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching users"})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var users []bson.M 
+	if err = cursor.All(ctx, &users); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding users"})
+		return
+	}
+
+	
+	total, _ := userCollection.CountDocuments(ctx, bson.M{"is_deleted": false})
+
+	
+	c.JSON(http.StatusOK, gin.H{
+		"status": true,
+		"data":   users,
+		"meta": gin.H{
+			"total":       total,
+			"page":        page,
+			"limit":       limit,
+			"total_pages": int(math.Ceil(float64(total) / float64(limit))),
+		},
+	})
 }
