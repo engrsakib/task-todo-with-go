@@ -2,7 +2,7 @@
 
 [![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/) [![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/) [![Gin Gonic](https://img.shields.io/badge/Gin_Gonic-008080?style=for-the-badge&logo=go&logoColor=white)](https://gin-gonic.com/) [![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=json-web-tokens&logoColor=white)](https://jwt.io/) [![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)](https://swagger.io/) [![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://render.com/)
 
----
+
 
 ## Project Overview
 
@@ -10,7 +10,7 @@
 
 The codebase follows clean architecture principles, emphasizes robust error handling, and is organized modularly to make the service scalable and easy to maintain.
 
----
+
 
 ## Key Features
 
@@ -21,14 +21,14 @@ The codebase follows clean architecture principles, emphasizes robust error hand
 - **API Documentation**: Auto-generated, interactive API documentation using Swagger UI.  
 - **Clean Architecture**: Modular services designed for testability and maintainability.
 
----
+
 
 ## Live Links
 
 - **Backend Server:** https://news-with-go.onrender.com/  
 - **Swagger UI (API Docs):** https://news-with-go.onrender.com/swagger/index.html
 
----
+
 
 ## Local Setup (Quick Start)
 
@@ -76,7 +76,7 @@ Make sure the following are installed and configured on your machine:
     ```
     The server will run by default at `http://localhost:8080`.
 
----
+
 
 ## Developer Profile
 
@@ -88,4 +88,3 @@ I am a dedicated backend engineer focused on building scalable, efficient, and m
 - LinkedIn: (Insert your LinkedIn profile link)  
 - Portfolio / Website: (Insert your portfolio or website link)
 
----
