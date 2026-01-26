@@ -30,7 +30,7 @@ func AuthRoutes(r *gin.Engine) {
 
 	
 		admin := protected.Group("/admin")
-		admin.Use(middleware.RoleMiddleware("admin"))
+		admin.Use(middleware.RoleMiddleware("ADMiN"))
 		{
 			admin.PATCH("/update-user", controllers.AdminUpdateUser)
 			admin.GET("/users", controllers.GetAllUsers)

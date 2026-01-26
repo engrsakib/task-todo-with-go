@@ -16,7 +16,6 @@ import (
 	"github.com/engrsakib/news-with-go/models"
 	"github.com/engrsakib/news-with-go/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -185,7 +184,6 @@ func LoginAsUser(c *gin.Context) {
 		Password string `json:"password" binding:"required"`
 	}
 
-	
 	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -205,7 +203,7 @@ func LoginAsUser(c *gin.Context) {
 		return
 	}
 
-	
+
 	if user.Is_Deleted {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Your account has been deactivated. Please contact support."})
 		return
@@ -222,43 +220,35 @@ func LoginAsUser(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		return
 	}
+
+	accessToken, refreshToken, err := utils.GenerateTokens(user.ID.Hex(), user.Name, user.Email, user.Role)
 	
-	
-	accessToken, err := utils.GenerateToken(user.ID.Hex(), user.Role, os.Getenv("JWT_SECRET"), time.Hour*1)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
 		return
 	}
 
-	refreshToken, err := utils.GenerateToken(user.ID.Hex(), user.Role, os.Getenv("REFRESH_SECRET"), time.Hour*24*7)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate refresh token"})
-		return
-	}
-
-
+	// ৬. রেসপন্স পাঠানো
 	response := struct {
-    Status       bool                   `json:"status"`
-    Message      string                 `json:"message"`
-    User         map[string]interface{} `json:"user"`
-    AccessToken  string                 `json:"access_token"`
-    RefreshToken string                 `json:"refresh_token"`
-}{
-    
-    Status:  true,
-    Message: "Login successful!",
-    User: gin.H{
-        "id":    user.ID,
-        "name":  user.Name,
-        "email": user.Email,
-        "role":  user.Role,
-    },
-    AccessToken:  accessToken,
-    RefreshToken: refreshToken,
-}
+		Status       bool                   `json:"status"`
+		Message      string                 `json:"message"`
+		User         map[string]interface{} `json:"user"`
+		AccessToken  string                 `json:"access_token"`
+		RefreshToken string                 `json:"refresh_token"`
+	}{
+		Status:  true,
+		Message: "Login successful!",
+		User: gin.H{
+			"id":    user.ID,
+			"name":  user.Name,
+			"email": user.Email,
+			"role":  user.Role,
+		},
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
 
-c.JSON(http.StatusOK, response)
-	
+	c.JSON(http.StatusOK, response)
 }
 
 
@@ -710,119 +700,134 @@ func DeleteUser(c *gin.Context) {
 
 
 func RefreshToken(c *gin.Context) {
-	
+	// ১. হেডার চেক
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header is required"})
 		return
 	}
 
-	
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header format must be Bearer {token}"})
 		return
 	}
-	refreshTokenString := parts[1] 
+	refreshTokenString := parts[1]
 
-	
-	token, err := jwt.Parse(refreshTokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(os.Getenv("REFRESH_SECRET")), nil
-	})
-
-	if err != nil || !token.Valid {
+	// ২. টোকেন ভ্যালিডেট (রিফ্রেশ সিক্রেট দিয়ে)
+	claims, err := utils.ValidateRefreshToken(refreshTokenString) // আপনার তৈরি করা নতুন ভ্যালিডেট ফাংশন
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired refresh token"})
 		return
 	}
 
-	
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
+	// ৩. 🛡️ ডাটাবেস থেকে ফ্রেশ ডাটা আনা (এটাই আসল ফিক্স)
+	// টোকেনের ফাঁকা ডাটার ওপর ভরসা না করে আমরা আইডি দিয়ে ডাটাবেস খুঁজব
+	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	userCollection := config.GetCollection("users")
+	var user models.User
+
+	// claims.UserID স্ট্রিং থেকে অবজেক্ট আইডিতে কনভার্ট (যদি আপনার মডেলে আইডি ObjectID হয়)
+	objID, err := primitive.ObjectIDFromHex(claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
 		return
 	}
 
-	userID := claims["user_id"].(string)
-	role := claims["role"].(string)
+	// ডাটাবেসে ইউজার খোঁজা
+	err = userCollection.FindOne(ctx, bson.M{"_id": objID}).Decode(&user)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+		return
+	}
 
-	
-	newAccessToken, err := utils.GenerateToken(userID, role, os.Getenv("JWT_SECRET"), time.Hour*1)
+	// ৪. সিকিউরিটি চেক (ইউজার ব্যান বা ডিলিট কিনা)
+	if user.Is_Deleted {
+		c.JSON(http.StatusForbidden, gin.H{"error": "User account is deactivated"})
+		return
+	}
+
+	// ৫. নতুন টোকেন জেনারেট (ডাটাবেসের রিয়েল ডাটা দিয়ে) ✅
+	// লক্ষ্য করুন: এখানে আমরা user.Name, user.Email, user.Role ডাটাবেস থেকে দিচ্ছি
+	newAccessToken, newRefreshToken, err := utils.GenerateTokens(user.ID.Hex(), user.Name, user.Email, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate new token"})
 		return
 	}
 
-	
-	response := struct {
-		Status      bool   `json:"status"`
-		AccessToken string `json:"access_token"`
-	}{
-		Status:      true,
-		AccessToken: newAccessToken,
-	}
-
-	c.JSON(http.StatusOK, response)
+	// ৬. রেসপন্স
+	c.JSON(http.StatusOK, gin.H{
+		"status":        true,
+		"access_token":  newAccessToken,
+		"refresh_token": newRefreshToken,
+	})
 }
 
 
 func GetAllUsers(c *gin.Context) {
-	
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+    
+    page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+    limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+    searchTerm := c.Query("search") 
 
-	
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 10
-	}
+    if page < 1 { page = 1 }
+    if limit < 1 { limit = 10 }
 
-	
-	skip := (page - 1) * limit
+    skip := (page - 1) * limit
 
-	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+    var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
 
-	userCollection := config.GetCollection("users")
+    userCollection := config.GetCollection("users")
 
-	
-	findOptions := options.Find()
-	findOptions.SetSkip(int64(skip))
-	findOptions.SetLimit(int64(limit))
-	findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}}) 
-	
-	
-	findOptions.SetProjection(bson.M{"password": 0}) 
+  
+    filter := bson.M{"is_deleted": false}
 
-	cursor, err := userCollection.Find(ctx, bson.M{"is_deleted": false}, findOptions)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching users"})
-		return
-	}
-	defer cursor.Close(ctx)
+    
+    if searchTerm != "" {
+        filter["$or"] = []bson.M{
+            {"name": bson.M{"$regex": searchTerm, "$options": "i"}},  
+            {"email": bson.M{"$regex": searchTerm, "$options": "i"}},
+        }
+    }
 
-	var users []bson.M 
-	if err = cursor.All(ctx, &users); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding users"})
-		return
-	}
 
-	
-	total, _ := userCollection.CountDocuments(ctx, bson.M{"is_deleted": false})
+    findOptions := options.Find()
+    findOptions.SetSkip(int64(skip))
+    findOptions.SetLimit(int64(limit))
+    findOptions.SetSort(bson.D{{Key: "created_at", Value: -1}}) 
+    findOptions.SetProjection(bson.M{"password": 0}) 
 
-	
-	c.JSON(http.StatusOK, gin.H{
-		"status": true,
-		"data":   users,
-		"meta": gin.H{
-			"total":       total,
-			"page":        page,
-			"limit":       limit,
-			"total_pages": int(math.Ceil(float64(total) / float64(limit))),
-		},
-	})
+    
+    cursor, err := userCollection.Find(ctx, filter, findOptions)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error fetching users"})
+        return
+    }
+    defer cursor.Close(ctx)
+
+   
+    users := make([]bson.M, 0)
+    
+    if err = cursor.All(ctx, &users); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Error decoding users"})
+        return
+    }
+
+ 
+    total, _ := userCollection.CountDocuments(ctx, filter)
+
+  
+    c.JSON(http.StatusOK, gin.H{
+        "status": true,
+        "data":   users,
+        "meta": gin.H{
+            "total":       total,
+            "page":        page,
+            "limit":       limit,
+            "total_pages": int(math.Ceil(float64(total) / float64(limit))),
+        },
+    })
 }
