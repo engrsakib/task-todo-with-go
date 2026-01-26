@@ -20,8 +20,8 @@ import (
 )
 
 // CreatePost godoc
-// @Summary      নতুন নিউজ পোস্ট তৈরি করা
-// @Description  লগইন করা ইউজার (Writer/Admin) একটি নতুন নিউজ পোস্ট তৈরি করতে পারবে। স্ট্যাটাস অনুযায়ী এটি সরাসরি পাবলিশ, ড্রাফট বা শিডিউল করা যায়।
+// @Summary     For creating a new post
+// @Description  Logged-in users (Writer/Admin) can create a new news post. Depending on the status, it can be published directly, saved as a draft, or scheduled.
 // @Tags         Posts
 // @Security     BearerAuth
 // @Accept       json
@@ -120,8 +120,8 @@ func CreatePost(c *gin.Context) {
 }
 
 // EditPost godoc
-// @Summary      পোস্ট আপডেট করা
-// @Description  পোস্টের লেখক বা অ্যাডমিন বিদ্যমান কোনো পোস্টের তথ্য পরিবর্তন করতে পারবে।
+// @Summary      Upgrade an existing post
+// @Description  The author of the post or an admin can modify the details of an existing post.
 // @Tags         Posts
 // @Security     BearerAuth
 // @Accept       json
@@ -260,8 +260,8 @@ func getUniqueSlug(ctx context.Context, collection *mongo.Collection, text strin
 
 
 // GetAllPosts godoc
-// @Summary      সকল পোস্টের তালিকা দেখা
-// @Description  পাবলিকলি সকল সচল (is_deleted: false) পোস্টের তালিকা দেখা যাবে। এখানে পেজিনেশন সুবিধা আছে।
+// @Summary      Get all active posts with pagination
+// @Description  Publicly view all active (is_deleted: false) posts with pagination support.
 // @Tags         Posts
 // @Produce      json
 // @Param        page   query     int  false  "Page number (Default: 1)"
@@ -336,8 +336,8 @@ func GetAllPosts(c *gin.Context) {
 
 
 // GetPostBySlug godoc
-// @Summary      Slug দিয়ে পোস্টের বিস্তারিত দেখা
-// @Description  পোস্টের ইউনিক স্ল্যাগ ব্যবহার করে বিস্তারিত নিউজ পড়া। প্রতিবার ভিজিটে Read Count ১ করে বৃদ্ধি পাবে।
+// @Summary      get a post by slug
+// @Description  Read detailed news using the post's unique slug. Each visit increments the Read Count by 1.
 // @Tags         Posts
 // @Produce      json
 // @Param        slug  path      string  true  "Post Slug"
@@ -383,8 +383,8 @@ func GetPostBySlug(c *gin.Context) {
 
 
 // ChangePostStatus godoc
-// @Summary      পোস্টের স্ট্যাটাস পরিবর্তন করা
-// @Description  পোস্টের স্ট্যাটাস (publish, schedule, draft) পরিবর্তন করা। শিডিউল করলে সময় প্রদান বাধ্যতামূলক।
+// @Summary      change post status
+// @Description  Change the post status (publish, schedule, draft). Providing a schedule time is mandatory when scheduling.
 // @Tags         Posts
 // @Security     BearerAuth
 // @Accept       json
@@ -478,8 +478,8 @@ func ChangePostStatus(c *gin.Context) {
 
 
 // DeletePost godoc
-// @Summary      পোস্ট ডিলিট করা (Soft Delete)
-// @Description  পোস্টটি ডাটাবেস থেকে স্থায়ীভাবে মুছে না ফেলে 'is_deleted' স্ট্যাটাস ট্রু করে দেওয়া হয়।
+// @Summary      Delete a post (soft delete)
+// @Description  Instead of permanently deleting the post from the database, the 'is_deleted' status is set to true.
 // @Tags         Posts
 // @Security     BearerAuth
 // @Param        id   path      string  true  "Post ID"
