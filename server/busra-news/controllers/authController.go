@@ -24,6 +24,53 @@ import (
 )
 
 
+type LoginRequest struct {
+	Email    string `json:"email" binding:"required,email" example:"user@example.com"`
+	Password string `json:"password" binding:"required" example:"123456"`
+}
+
+type VerifyOTPRequest struct {
+	Email string `json:"email" binding:"required,email" example:"user@example.com"`
+	OTP   string `json:"otp" binding:"required" example:"1234"`
+}
+
+type ResendOTPRequest struct {
+	Email string `json:"email" binding:"required,email" example:"user@example.com"`
+}
+
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email" example:"user@example.com"`
+	OTP         string `json:"otp" binding:"required" example:"1234"`
+	NewPassword string `json:"newPassword" binding:"required,min=6" example:"newpassword123"`
+}
+
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword" binding:"required"`
+	NewPassword     string `json:"newPassword" binding:"required,min=6"`
+	RetypePassword  string `json:"retypePassword" binding:"required,eqfield=NewPassword"`
+}
+
+type UpdateUserRequest struct {
+	Name string `json:"name" binding:"required" example:"Sakib Khan"`
+}
+
+type AdminUpdateUserRequest struct {
+	TargetUserID string `json:"targetUserId" binding:"required" example:"65b1a5e2..." `
+	Role         string `json:"role" example:"ADMIN"`
+	Verified     *bool  `json:"verified" example:"true"`
+	NewPassword  string `json:"newPassword" example:"admin123456"`
+}
+
+// RegisterUser godoc
+// @Summary      ইউজার রেজিস্ট্রেশন
+// @Description  নতুন ইউজার অ্যাকাউন্ট তৈরি করে এবং ইমেইলে ৪ ডিজিটের OTP পাঠায়
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        user  body      models.User  true  "User Registration Data"
+// @Success      201   {object}  map[string]interface{}
+// @Router       /auth/register [post]
+
 func RegisterUser(c *gin.Context) {
 	var user models.User
 	var ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
@@ -129,7 +176,15 @@ func sendOTPEmail(toEmail string, otp string) error {
 	return nil
 }
 
-
+// ResendOTP godoc
+// @Summary      OTP পুনরায় পাঠানো
+// @Description  ভেরিফিকেশন সম্পন্ন না হওয়া একাউন্টের জন্য নতুন OTP পাঠায়
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        input  body      ResendOTPRequest  true  "User Email"
+// @Success      200    {object}  map[string]interface{}
+// @Router       /auth/resend-otp [post]
 func ResendOTP(c *gin.Context) {
 	var input struct {
 		Email string `json:"email" binding:"required,email"`
@@ -178,6 +233,15 @@ func ResendOTP(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "A new verification code has been sent to your email."})
 }
 
+// LoginAsUser godoc
+// @Summary      ইউজার লগইন
+// @Description  ইমেইল ও পাসওয়ার্ড দিয়ে লগইন করে Access ও Refresh টোকেন সংগ্রহ করুন
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body  LoginRequest  true  "Login Credentials"
+// @Success      200          {object}  map[string]interface{}
+// @Router       /auth/login [post]
 func LoginAsUser(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email" binding:"required,email"`
@@ -251,7 +315,15 @@ func LoginAsUser(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-
+// VerifyOTP godoc
+// @Summary      অ্যাকাউন্ট ভেরিফাই করা
+// @Description  ইমেইলে পাঠানো OTP দিয়ে অ্যাকাউন্ট একটিভ করুন
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        verify  body      VerifyOTPRequest  true  "Verification Data"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /auth/verify [post]
 func VerifyOTP(c *gin.Context) {
 	var input struct {
 		Email string `json:"email" binding:"required,email"`
@@ -302,7 +374,15 @@ func VerifyOTP(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Account verified successfully! You can login now."})
 }
 
-
+// ForgotPassword godoc
+// @Summary      পাসওয়ার্ড ভুলে গেলে OTP পাঠানো
+// @Description  পাসওয়ার্ড রিসেট করার জন্য ইমেইলে OTP পাঠায়
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        forgot  body      ResendOTPRequest  true  "User Email"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /auth/forgot-password [post]
 func ForgotPassword(c *gin.Context) {
 	var input struct {
 		Email string `json:"email" binding:"required,email"`
@@ -346,6 +426,15 @@ func ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset OTP sent to your email."})
 }
 
+// ResetPassword godoc
+// @Summary      পাসওয়ার্ড রিসেট করা
+// @Description  OTP ভেরিফাই করে নতুন পাসওয়ার্ড সেট করুন
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        reset  body      ResetPasswordRequest  true  "Reset Data"
+// @Success      200    {object}  map[string]interface{}
+// @Router       /auth/reset-password [post]
 func ResetPassword(c *gin.Context) {
 	var input struct {
 		Email       string `json:"email" binding:"required,email"`
@@ -398,7 +487,14 @@ func ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully! You can login now."})
 }
 
-
+// GetProfile godoc
+// @Summary      Get current user profile
+// @Description  Retrieve profile details of the logged-in user
+// @Tags         Users
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200   {object}  map[string]interface{}
+// @Router       /auth/me [get]
 func GetProfile(c *gin.Context) {
 	
 	userId, exists := c.Get("userId")
@@ -441,7 +537,16 @@ func GetProfile(c *gin.Context) {
 }
 
 
-
+// ChangePassword godoc
+// @Summary      পাসওয়ার্ড পরিবর্তন (লগইন থাকা অবস্থায়)
+// @Description  বর্তমান পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ড সেট করুন
+// @Tags         Users
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        change  body      ChangePasswordRequest  true  "Change Password Data"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /auth/change-password [post]
 func ChangePassword(c *gin.Context) {
 	
 	var input struct {
@@ -503,7 +608,16 @@ func ChangePassword(c *gin.Context) {
 
 
 
-
+// UpdateUser godoc
+// @Summary      নিজের নাম পরিবর্তন করা
+// @Description  ইউজার তার নিজের নাম আপডেট করতে পারবে
+// @Tags         Users
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        update  body      UpdateUserRequest  true  "Update Name"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /auth/update-profile [patch]
 func UpdateUser(c *gin.Context) {
 	
 	var input struct {
@@ -576,6 +690,17 @@ func UpdateUser(c *gin.Context) {
 	})
 }
 
+
+// AdminUpdateUser godoc
+// @Summary      ইউজার আপডেট (অ্যাডমিন শুধু)
+// @Description  অ্যাডমিন যেকোনো ইউজারের রোল, ভেরিফিকেশন স্ট্যাটাস বা পাসওয়ার্ড পরিবর্তন করতে পারবে
+// @Tags         Admin
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        adminUpdate  body      AdminUpdateUserRequest  true  "Admin Update Data"
+// @Success      200          {object}  map[string]interface{}
+// @Router       /auth/admin/update-user [patch]
 func AdminUpdateUser(c *gin.Context) {
 	
 	var input struct {
@@ -648,7 +773,14 @@ func AdminUpdateUser(c *gin.Context) {
 }
 
 
-
+// DeleteUser godoc
+// @Summary      Deactivate user account
+// @Description  Soft delete a user account by ID (Admin or Self)
+// @Tags         Admin
+// @Security     BearerAuth
+// @Param        id    path      string  true  "User ID"
+// @Success      200   {object}  map[string]interface{}
+// @Router       /auth/admin/delete-user/{id} [delete]
 func DeleteUser(c *gin.Context) {
 	
 	targetUserID := c.Param("id")
@@ -698,7 +830,14 @@ func DeleteUser(c *gin.Context) {
 }
 
 
-
+// RefreshToken godoc
+// @Summary      নতুন এক্সেস টোকেন জেনারেট করা
+// @Description  রিফ্রেশ টোকেন ব্যবহার করে নতুন এক্সেস টোকেন নেওয়া
+// @Tags         Auth
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200  {object}  map[string]interface{}
+// @Router       /auth/refresh-token [post]
 func RefreshToken(c *gin.Context) {
 	// ১. হেডার চেক
 	authHeader := c.GetHeader("Authorization")
@@ -765,7 +904,16 @@ func RefreshToken(c *gin.Context) {
 	})
 }
 
-
+// GetAllUsers godoc
+// @Summary      Get all users (Admin Only)
+// @Description  Retrieve a paginated list of all non-deleted users
+// @Tags         Admin
+// @Security     BearerAuth
+// @Param        page    query     int     false  "Page number"
+// @Param        limit   query     int     false  "Items per page"
+// @Param        search  query     string  false  "Search by name or email"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /auth/admin/users [get]
 func GetAllUsers(c *gin.Context) {
     
     page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

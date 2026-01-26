@@ -19,7 +19,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-
+// CreatePost godoc
+// @Summary      নতুন নিউজ পোস্ট তৈরি করা
+// @Description  লগইন করা ইউজার (Writer/Admin) একটি নতুন নিউজ পোস্ট তৈরি করতে পারবে। স্ট্যাটাস অনুযায়ী এটি সরাসরি পাবলিশ, ড্রাফট বা শিডিউল করা যায়।
+// @Tags         Posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        post  body      object  true  "Post Input (title, description, status, tags, etc.)"
+// @Success      201   {object}  map[string]interface{}
+// @Failure      400   {object}  map[string]interface{}
+// @Router       /posts/create [post]
 func CreatePost(c *gin.Context) {
 	
 	var input struct {
@@ -109,7 +119,18 @@ func CreatePost(c *gin.Context) {
 	})
 }
 
-
+// EditPost godoc
+// @Summary      পোস্ট আপডেট করা
+// @Description  পোস্টের লেখক বা অ্যাডমিন বিদ্যমান কোনো পোস্টের তথ্য পরিবর্তন করতে পারবে।
+// @Tags         Posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id    path      string  true  "Post ID"
+// @Param        post  body      object  true  "Updated fields"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      403   {object}  map[string]interface{}
+// @Router       /posts/update/{id} [put]
 func EditPost(c *gin.Context) {
 	
 	postID := c.Param("id")
@@ -207,6 +228,8 @@ func EditPost(c *gin.Context) {
 	})
 }
 
+
+
 func getUniqueSlug(ctx context.Context, collection *mongo.Collection, text string) string {
 	
 	
@@ -236,7 +259,15 @@ func getUniqueSlug(ctx context.Context, collection *mongo.Collection, text strin
 }
 
 
-
+// GetAllPosts godoc
+// @Summary      সকল পোস্টের তালিকা দেখা
+// @Description  পাবলিকলি সকল সচল (is_deleted: false) পোস্টের তালিকা দেখা যাবে। এখানে পেজিনেশন সুবিধা আছে।
+// @Tags         Posts
+// @Produce      json
+// @Param        page   query     int  false  "Page number (Default: 1)"
+// @Param        limit  query     int  false  "Items per page (Default: 10)"
+// @Success      200    {object}  map[string]interface{}
+// @Router       /posts [get]
 func GetAllPosts(c *gin.Context) {
 	
 	pageStr := c.DefaultQuery("page", "1")
@@ -304,7 +335,15 @@ func GetAllPosts(c *gin.Context) {
 }
 
 
-
+// GetPostBySlug godoc
+// @Summary      Slug দিয়ে পোস্টের বিস্তারিত দেখা
+// @Description  পোস্টের ইউনিক স্ল্যাগ ব্যবহার করে বিস্তারিত নিউজ পড়া। প্রতিবার ভিজিটে Read Count ১ করে বৃদ্ধি পাবে।
+// @Tags         Posts
+// @Produce      json
+// @Param        slug  path      string  true  "Post Slug"
+// @Success      200   {object}  map[string]interface{}
+// @Failure      404   {object}  map[string]interface{}
+// @Router       /posts/{slug} [get]
 func GetPostBySlug(c *gin.Context) {
 	
 	slug := c.Param("slug")
@@ -343,7 +382,17 @@ func GetPostBySlug(c *gin.Context) {
 }
 
 
-
+// ChangePostStatus godoc
+// @Summary      পোস্টের স্ট্যাটাস পরিবর্তন করা
+// @Description  পোস্টের স্ট্যাটাস (publish, schedule, draft) পরিবর্তন করা। শিডিউল করলে সময় প্রদান বাধ্যতামূলক।
+// @Tags         Posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id      path      string  true  "Post ID"
+// @Param        status  body      object  true  "New status and schedule time"
+// @Success      200     {object}  map[string]interface{}
+// @Router       /posts/status/{id} [patch]
 func ChangePostStatus(c *gin.Context) {
 	
 	postID := c.Param("id")
@@ -428,7 +477,14 @@ func ChangePostStatus(c *gin.Context) {
 }
 
 
-
+// DeletePost godoc
+// @Summary      পোস্ট ডিলিট করা (Soft Delete)
+// @Description  পোস্টটি ডাটাবেস থেকে স্থায়ীভাবে মুছে না ফেলে 'is_deleted' স্ট্যাটাস ট্রু করে দেওয়া হয়।
+// @Tags         Posts
+// @Security     BearerAuth
+// @Param        id   path      string  true  "Post ID"
+// @Success      200  {object}  map[string]interface{}
+// @Router       /posts/{id} [delete]
 func DeletePost(c *gin.Context) {
 	
 	postID := c.Param("id")

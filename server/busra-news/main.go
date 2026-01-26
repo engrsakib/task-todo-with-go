@@ -1,11 +1,34 @@
 package main
 
+// @title           Busra News API
+// @version         1.0
+// @description     This is a sample news server for Busra News.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      https://news-with-go.onrender.com
+// @BasePath  /api
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type 'Bearer ' followed by your JWT token.
+
 import (
 	"os"
 
 	"github.com/engrsakib/news-with-go/config"
-	"github.com/engrsakib/news-with-go/routes" // ১. এই লাইনটি খেয়াল করুন (ইমপোর্ট)
+	_ "github.com/engrsakib/news-with-go/docs"
+	"github.com/engrsakib/news-with-go/routes"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -28,6 +51,9 @@ func main() {
 	})
 
 	
+	// url := ginSwagger.URL("http://localhost:8080/swagger/doc.json") 
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Welcome to Busra News Server!",
