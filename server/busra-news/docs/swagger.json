@@ -57,7 +57,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "অ্যাডমিন যেকোনো ইউজারের রোল, ভেরিফিকেশন স্ট্যাটাস বা পাসওয়ার্ড পরিবর্তন করতে পারবে",
+                "description": "Admin can change any user's role, verification status, or password",
                 "consumes": [
                     "application/json"
                 ],
@@ -67,7 +67,7 @@
                 "tags": [
                     "Admin"
                 ],
-                "summary": "ইউজার আপডেট (অ্যাডমিন শুধু)",
+                "summary": "Admin update user details",
                 "parameters": [
                     {
                         "description": "Admin Update Data",
@@ -140,7 +140,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "বর্তমান পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ড সেট করুন",
+                "description": "Set a new password using the current password",
                 "consumes": [
                     "application/json"
                 ],
@@ -150,7 +150,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "পাসওয়ার্ড পরিবর্তন (লগইন থাকা অবস্থায়)",
+                "summary": "Change password (while logged in)",
                 "parameters": [
                     {
                         "description": "Change Password Data",
@@ -175,7 +175,7 @@
         },
         "/auth/forgot-password": {
             "post": {
-                "description": "পাসওয়ার্ড রিসেট করার জন্য ইমেইলে OTP পাঠায়",
+                "description": "Sends an OTP to the email for password reset",
                 "consumes": [
                     "application/json"
                 ],
@@ -185,7 +185,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "পাসওয়ার্ড ভুলে গেলে OTP পাঠানো",
+                "summary": "Reset password",
                 "parameters": [
                     {
                         "description": "User Email",
@@ -210,7 +210,7 @@
         },
         "/auth/login": {
             "post": {
-                "description": "ইমেইল ও পাসওয়ার্ড দিয়ে লগইন করে Access ও Refresh টোকেন সংগ্রহ করুন",
+                "description": "Login with email and password to obtain Access and Refresh tokens",
                 "consumes": [
                     "application/json"
                 ],
@@ -220,7 +220,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "ইউজার লগইন",
+                "summary": "user login",
                 "parameters": [
                     {
                         "description": "Login Credentials",
@@ -276,14 +276,14 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "রিফ্রেশ টোকেন ব্যবহার করে নতুন এক্সেস টোকেন নেওয়া",
+                "description": "Obtain a new access token using a refresh token",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Auth"
                 ],
-                "summary": "নতুন এক্সেস টোকেন জেনারেট করা",
+                "summary": "Refresh access token",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -297,7 +297,7 @@
         },
         "/auth/resend-otp": {
             "post": {
-                "description": "ভেরিফিকেশন সম্পন্ন না হওয়া একাউন্টের জন্য নতুন OTP পাঠায়",
+                "description": "Sends a new OTP for accounts that have not completed verification",
                 "consumes": [
                     "application/json"
                 ],
@@ -307,7 +307,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "OTP পুনরায় পাঠানো",
+                "summary": "Resend OTP",
                 "parameters": [
                     {
                         "description": "User Email",
@@ -332,7 +332,7 @@
         },
         "/auth/reset-password": {
             "post": {
-                "description": "OTP ভেরিফাই করে নতুন পাসওয়ার্ড সেট করুন",
+                "description": "Verify OTP and set a new password",
                 "consumes": [
                     "application/json"
                 ],
@@ -342,7 +342,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "পাসওয়ার্ড রিসেট করা",
+                "summary": "Reset password using OTP",
                 "parameters": [
                     {
                         "description": "Reset Data",
@@ -372,7 +372,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "ইউজার তার নিজের নাম আপডেট করতে পারবে",
+                "description": "Users can update their own name",
                 "consumes": [
                     "application/json"
                 ],
@@ -382,7 +382,7 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "নিজের নাম পরিবর্তন করা",
+                "summary": "Update user name",
                 "parameters": [
                     {
                         "description": "Update Name",
@@ -407,7 +407,7 @@
         },
         "/auth/verify": {
             "post": {
-                "description": "ইমেইলে পাঠানো OTP দিয়ে অ্যাকাউন্ট একটিভ করুন",
+                "description": "Activate account using OTP sent to email",
                 "consumes": [
                     "application/json"
                 ],
@@ -417,7 +417,7 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "অ্যাকাউন্ট ভেরিফাই করা",
+                "summary": "Verify account",
                 "parameters": [
                     {
                         "description": "Verification Data",
@@ -447,7 +447,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "নিউজ পোস্টে নতুন কমেন্ট অথবা অন্য কোনো কমেন্টের আন্ডারে রিপ্লাই দেওয়া। রিপ্লাইয়ের ক্ষেত্রে parent_id প্রদান করতে হবে।",
+                "description": "Add a new comment to a news post or reply under another comment. For replies, the parent_id must be provided.",
                 "consumes": [
                     "application/json"
                 ],
@@ -457,7 +457,7 @@
                 "tags": [
                     "Comments"
                 ],
-                "summary": "নতুন কমেন্ট বা রিপ্লাই তৈরি করা",
+                "summary": "create a new comment or reply",
                 "parameters": [
                     {
                         "description": "Comment Input (post_id, content, parent_id)",
@@ -489,14 +489,14 @@
         },
         "/comments/post/{id}": {
             "get": {
-                "description": "একটি নির্দিষ্ট পোস্টের সকল সচল কমেন্টগুলো থ্রেডেড (Threaded) আকারে অর্থাৎ কমেন্টের নিচে রিপ্লাইসহ দেখা যাবে।",
+                "description": "Fetch all comments for a specific post along with their nested replies, structured hierarchically.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Comments"
                 ],
-                "summary": "পোস্টের সকল কমেন্ট ও রিপ্লাই দেখা",
+                "summary": "get comments and replies for a post",
                 "parameters": [
                     {
                         "type": "string",
@@ -531,7 +531,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "লগইন করা ইউজার শুধুমাত্র নিজের করা কমেন্টের কন্টেন্ট পরিবর্তন করতে পারবে।",
+                "description": "Logged-in users can only modify the content of their own comments.",
                 "consumes": [
                     "application/json"
                 ],
@@ -541,7 +541,7 @@
                 "tags": [
                     "Comments"
                 ],
-                "summary": "কমেন্ট এডিট করা",
+                "summary": "edit a comment",
                 "parameters": [
                     {
                         "type": "string",
@@ -585,11 +585,11 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "কমেন্ট সফট ডিলিট করা হয়। শুধুমাত্র কমেন্টের লেখক অথবা অ্যাডমিন এটি ডিলিট করতে পারবে।",
+                "description": "Comments are soft deleted. Only the author of the comment or an admin can delete it.",
                 "tags": [
                     "Comments"
                 ],
-                "summary": "কমেন্ট ডিলিট করা",
+                "summary": "delete a comment (soft delete)",
                 "parameters": [
                     {
                         "type": "string",
@@ -619,14 +619,14 @@
         },
         "/posts": {
             "get": {
-                "description": "পাবলিকলি সকল সচল (is_deleted: false) পোস্টের তালিকা দেখা যাবে। এখানে পেজিনেশন সুবিধা আছে।",
+                "description": "Publicly view all active (is_deleted: false) posts with pagination support.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Posts"
                 ],
-                "summary": "সকল পোস্টের তালিকা দেখা",
+                "summary": "Get all active posts with pagination",
                 "parameters": [
                     {
                         "type": "integer",
@@ -659,7 +659,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "লগইন করা ইউজার (Writer/Admin) একটি নতুন নিউজ পোস্ট তৈরি করতে পারবে। স্ট্যাটাস অনুযায়ী এটি সরাসরি পাবলিশ, ড্রাফট বা শিডিউল করা যায়।",
+                "description": "Logged-in users (Writer/Admin) can create a new news post. Depending on the status, it can be published directly, saved as a draft, or scheduled.",
                 "consumes": [
                     "application/json"
                 ],
@@ -669,7 +669,7 @@
                 "tags": [
                     "Posts"
                 ],
-                "summary": "নতুন নিউজ পোস্ট তৈরি করা",
+                "summary": "For creating a new post",
                 "parameters": [
                     {
                         "description": "Post Input (title, description, status, tags, etc.)",
@@ -706,7 +706,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "পোস্টের স্ট্যাটাস (publish, schedule, draft) পরিবর্তন করা। শিডিউল করলে সময় প্রদান বাধ্যতামূলক।",
+                "description": "Change the post status (publish, schedule, draft). Providing a schedule time is mandatory when scheduling.",
                 "consumes": [
                     "application/json"
                 ],
@@ -716,7 +716,7 @@
                 "tags": [
                     "Posts"
                 ],
-                "summary": "পোস্টের স্ট্যাটাস পরিবর্তন করা",
+                "summary": "change post status",
                 "parameters": [
                     {
                         "type": "string",
@@ -753,7 +753,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "পোস্টের লেখক বা অ্যাডমিন বিদ্যমান কোনো পোস্টের তথ্য পরিবর্তন করতে পারবে।",
+                "description": "The author of the post or an admin can modify the details of an existing post.",
                 "consumes": [
                     "application/json"
                 ],
@@ -763,7 +763,7 @@
                 "tags": [
                     "Posts"
                 ],
-                "summary": "পোস্ট আপডেট করা",
+                "summary": "Upgrade an existing post",
                 "parameters": [
                     {
                         "type": "string",
@@ -807,11 +807,11 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "পোস্টটি ডাটাবেস থেকে স্থায়ীভাবে মুছে না ফেলে 'is_deleted' স্ট্যাটাস ট্রু করে দেওয়া হয়।",
+                "description": "Instead of permanently deleting the post from the database, the 'is_deleted' status is set to true.",
                 "tags": [
                     "Posts"
                 ],
-                "summary": "পোস্ট ডিলিট করা (Soft Delete)",
+                "summary": "Delete a post (soft delete)",
                 "parameters": [
                     {
                         "type": "string",
@@ -834,14 +834,14 @@
         },
         "/posts/{slug}": {
             "get": {
-                "description": "পোস্টের ইউনিক স্ল্যাগ ব্যবহার করে বিস্তারিত নিউজ পড়া। প্রতিবার ভিজিটে Read Count ১ করে বৃদ্ধি পাবে।",
+                "description": "Read detailed news using the post's unique slug. Each visit increments the Read Count by 1.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Posts"
                 ],
-                "summary": "Slug দিয়ে পোস্টের বিস্তারিত দেখা",
+                "summary": "get a post by slug",
                 "parameters": [
                     {
                         "type": "string",

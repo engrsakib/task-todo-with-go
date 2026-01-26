@@ -62,8 +62,8 @@ type AdminUpdateUserRequest struct {
 }
 
 // RegisterUser godoc
-// @Summary      ইউজার রেজিস্ট্রেশন
-// @Description  নতুন ইউজার অ্যাকাউন্ট তৈরি করে এবং ইমেইলে ৪ ডিজিটের OTP পাঠায়
+// @Summary      Register a new user
+// @Description  Creates a new user account and sends a 4-digit OTP to the user's email
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -177,8 +177,8 @@ func sendOTPEmail(toEmail string, otp string) error {
 }
 
 // ResendOTP godoc
-// @Summary      OTP পুনরায় পাঠানো
-// @Description  ভেরিফিকেশন সম্পন্ন না হওয়া একাউন্টের জন্য নতুন OTP পাঠায়
+// @Summary      Resend OTP
+// @Description  Sends a new OTP for accounts that have not completed verification
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -234,8 +234,8 @@ func ResendOTP(c *gin.Context) {
 }
 
 // LoginAsUser godoc
-// @Summary      ইউজার লগইন
-// @Description  ইমেইল ও পাসওয়ার্ড দিয়ে লগইন করে Access ও Refresh টোকেন সংগ্রহ করুন
+// @Summary      user login
+// @Description  Login with email and password to obtain Access and Refresh tokens
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -316,8 +316,8 @@ func LoginAsUser(c *gin.Context) {
 }
 
 // VerifyOTP godoc
-// @Summary      অ্যাকাউন্ট ভেরিফাই করা
-// @Description  ইমেইলে পাঠানো OTP দিয়ে অ্যাকাউন্ট একটিভ করুন
+// @Summary      Verify account
+// @Description  Activate account using OTP sent to email
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -375,8 +375,8 @@ func VerifyOTP(c *gin.Context) {
 }
 
 // ForgotPassword godoc
-// @Summary      পাসওয়ার্ড ভুলে গেলে OTP পাঠানো
-// @Description  পাসওয়ার্ড রিসেট করার জন্য ইমেইলে OTP পাঠায়
+// @Summary      Reset password
+// @Description  Sends an OTP to the email for password reset
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -427,8 +427,8 @@ func ForgotPassword(c *gin.Context) {
 }
 
 // ResetPassword godoc
-// @Summary      পাসওয়ার্ড রিসেট করা
-// @Description  OTP ভেরিফাই করে নতুন পাসওয়ার্ড সেট করুন
+// @Summary      Reset password using OTP
+// @Description  Verify OTP and set a new password
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
@@ -538,8 +538,8 @@ func GetProfile(c *gin.Context) {
 
 
 // ChangePassword godoc
-// @Summary      পাসওয়ার্ড পরিবর্তন (লগইন থাকা অবস্থায়)
-// @Description  বর্তমান পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ড সেট করুন
+// @Summary      Change password (while logged in)
+// @Description  Set a new password using the current password
 // @Tags         Users
 // @Security     BearerAuth
 // @Accept       json
@@ -609,8 +609,8 @@ func ChangePassword(c *gin.Context) {
 
 
 // UpdateUser godoc
-// @Summary      নিজের নাম পরিবর্তন করা
-// @Description  ইউজার তার নিজের নাম আপডেট করতে পারবে
+// @Summary      Update user name
+// @Description  Users can update their own name
 // @Tags         Users
 // @Security     BearerAuth
 // @Accept       json
@@ -692,8 +692,8 @@ func UpdateUser(c *gin.Context) {
 
 
 // AdminUpdateUser godoc
-// @Summary      ইউজার আপডেট (অ্যাডমিন শুধু)
-// @Description  অ্যাডমিন যেকোনো ইউজারের রোল, ভেরিফিকেশন স্ট্যাটাস বা পাসওয়ার্ড পরিবর্তন করতে পারবে
+// @Summary      Admin update user details
+// @Description  Admin can change any user's role, verification status, or password
 // @Tags         Admin
 // @Security     BearerAuth
 // @Accept       json
@@ -831,8 +831,8 @@ func DeleteUser(c *gin.Context) {
 
 
 // RefreshToken godoc
-// @Summary      নতুন এক্সেস টোকেন জেনারেট করা
-// @Description  রিফ্রেশ টোকেন ব্যবহার করে নতুন এক্সেস টোকেন নেওয়া
+// @Summary      Refresh access token
+// @Description  Obtain a new access token using a refresh token
 // @Tags         Auth
 // @Security     BearerAuth
 // @Produce      json

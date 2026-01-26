@@ -126,8 +126,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: অ্যাডমিন যেকোনো ইউজারের রোল, ভেরিফিকেশন স্ট্যাটাস বা পাসওয়ার্ড
-        পরিবর্তন করতে পারবে
+      description: Admin can change any user's role, verification status, or password
       parameters:
       - description: Admin Update Data
         in: body
@@ -145,7 +144,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: ইউজার আপডেট (অ্যাডমিন শুধু)
+      summary: Admin update user details
       tags:
       - Admin
   /auth/admin/users:
@@ -179,7 +178,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: বর্তমান পাসওয়ার্ড দিয়ে নতুন পাসওয়ার্ড সেট করুন
+      description: Set a new password using the current password
       parameters:
       - description: Change Password Data
         in: body
@@ -197,14 +196,14 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: পাসওয়ার্ড পরিবর্তন (লগইন থাকা অবস্থায়)
+      summary: Change password (while logged in)
       tags:
       - Users
   /auth/forgot-password:
     post:
       consumes:
       - application/json
-      description: পাসওয়ার্ড রিসেট করার জন্য ইমেইলে OTP পাঠায়
+      description: Sends an OTP to the email for password reset
       parameters:
       - description: User Email
         in: body
@@ -220,14 +219,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: পাসওয়ার্ড ভুলে গেলে OTP পাঠানো
+      summary: Reset password
       tags:
       - Auth
   /auth/login:
     post:
       consumes:
       - application/json
-      description: ইমেইল ও পাসওয়ার্ড দিয়ে লগইন করে Access ও Refresh টোকেন সংগ্রহ করুন
+      description: Login with email and password to obtain Access and Refresh tokens
       parameters:
       - description: Login Credentials
         in: body
@@ -243,7 +242,7 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: ইউজার লগইন
+      summary: user login
       tags:
       - Auth
   /auth/me:
@@ -264,7 +263,7 @@ paths:
       - Users
   /auth/refresh-token:
     post:
-      description: রিফ্রেশ টোকেন ব্যবহার করে নতুন এক্সেস টোকেন নেওয়া
+      description: Obtain a new access token using a refresh token
       produces:
       - application/json
       responses:
@@ -275,14 +274,14 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: নতুন এক্সেস টোকেন জেনারেট করা
+      summary: Refresh access token
       tags:
       - Auth
   /auth/resend-otp:
     post:
       consumes:
       - application/json
-      description: ভেরিফিকেশন সম্পন্ন না হওয়া একাউন্টের জন্য নতুন OTP পাঠায়
+      description: Sends a new OTP for accounts that have not completed verification
       parameters:
       - description: User Email
         in: body
@@ -298,14 +297,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: OTP পুনরায় পাঠানো
+      summary: Resend OTP
       tags:
       - Auth
   /auth/reset-password:
     post:
       consumes:
       - application/json
-      description: OTP ভেরিফাই করে নতুন পাসওয়ার্ড সেট করুন
+      description: Verify OTP and set a new password
       parameters:
       - description: Reset Data
         in: body
@@ -321,14 +320,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: পাসওয়ার্ড রিসেট করা
+      summary: Reset password using OTP
       tags:
       - Auth
   /auth/update-profile:
     patch:
       consumes:
       - application/json
-      description: ইউজার তার নিজের নাম আপডেট করতে পারবে
+      description: Users can update their own name
       parameters:
       - description: Update Name
         in: body
@@ -346,14 +345,14 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: নিজের নাম পরিবর্তন করা
+      summary: Update user name
       tags:
       - Users
   /auth/verify:
     post:
       consumes:
       - application/json
-      description: ইমেইলে পাঠানো OTP দিয়ে অ্যাকাউন্ট একটিভ করুন
+      description: Activate account using OTP sent to email
       parameters:
       - description: Verification Data
         in: body
@@ -369,13 +368,13 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: অ্যাকাউন্ট ভেরিফাই করা
+      summary: Verify account
       tags:
       - Auth
   /comments/{id}:
     delete:
-      description: কমেন্ট সফট ডিলিট করা হয়। শুধুমাত্র কমেন্টের লেখক অথবা অ্যাডমিন
-        এটি ডিলিট করতে পারবে।
+      description: Comments are soft deleted. Only the author of the comment or an
+        admin can delete it.
       parameters:
       - description: Comment ID
         in: path
@@ -395,15 +394,15 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: কমেন্ট ডিলিট করা
+      summary: delete a comment (soft delete)
       tags:
       - Comments
   /comments/create:
     post:
       consumes:
       - application/json
-      description: নিউজ পোস্টে নতুন কমেন্ট অথবা অন্য কোনো কমেন্টের আন্ডারে রিপ্লাই
-        দেওয়া। রিপ্লাইয়ের ক্ষেত্রে parent_id প্রদান করতে হবে।
+      description: Add a new comment to a news post or reply under another comment.
+        For replies, the parent_id must be provided.
       parameters:
       - description: Comment Input (post_id, content, parent_id)
         in: body
@@ -426,13 +425,13 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: নতুন কমেন্ট বা রিপ্লাই তৈরি করা
+      summary: create a new comment or reply
       tags:
       - Comments
   /comments/post/{id}:
     get:
-      description: একটি নির্দিষ্ট পোস্টের সকল সচল কমেন্টগুলো থ্রেডেড (Threaded) আকারে
-        অর্থাৎ কমেন্টের নিচে রিপ্লাইসহ দেখা যাবে।
+      description: Fetch all comments for a specific post along with their nested
+        replies, structured hierarchically.
       parameters:
       - description: Post ID
         in: path
@@ -452,15 +451,14 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: পোস্টের সকল কমেন্ট ও রিপ্লাই দেখা
+      summary: get comments and replies for a post
       tags:
       - Comments
   /comments/update/{id}:
     put:
       consumes:
       - application/json
-      description: লগইন করা ইউজার শুধুমাত্র নিজের করা কমেন্টের কন্টেন্ট পরিবর্তন করতে
-        পারবে।
+      description: Logged-in users can only modify the content of their own comments.
       parameters:
       - description: Comment ID
         in: path
@@ -488,13 +486,13 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: কমেন্ট এডিট করা
+      summary: edit a comment
       tags:
       - Comments
   /posts:
     get:
-      description: 'পাবলিকলি সকল সচল (is_deleted: false) পোস্টের তালিকা দেখা যাবে।
-        এখানে পেজিনেশন সুবিধা আছে।'
+      description: 'Publicly view all active (is_deleted: false) posts with pagination
+        support.'
       parameters:
       - description: 'Page number (Default: 1)'
         in: query
@@ -512,13 +510,13 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: সকল পোস্টের তালিকা দেখা
+      summary: Get all active posts with pagination
       tags:
       - Posts
   /posts/{id}:
     delete:
-      description: পোস্টটি ডাটাবেস থেকে স্থায়ীভাবে মুছে না ফেলে 'is_deleted' স্ট্যাটাস
-        ট্রু করে দেওয়া হয়।
+      description: Instead of permanently deleting the post from the database, the
+        'is_deleted' status is set to true.
       parameters:
       - description: Post ID
         in: path
@@ -533,13 +531,13 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: পোস্ট ডিলিট করা (Soft Delete)
+      summary: Delete a post (soft delete)
       tags:
       - Posts
   /posts/{slug}:
     get:
-      description: পোস্টের ইউনিক স্ল্যাগ ব্যবহার করে বিস্তারিত নিউজ পড়া। প্রতিবার
-        ভিজিটে Read Count ১ করে বৃদ্ধি পাবে।
+      description: Read detailed news using the post's unique slug. Each visit increments
+        the Read Count by 1.
       parameters:
       - description: Post Slug
         in: path
@@ -559,15 +557,15 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Slug দিয়ে পোস্টের বিস্তারিত দেখা
+      summary: get a post by slug
       tags:
       - Posts
   /posts/create:
     post:
       consumes:
       - application/json
-      description: লগইন করা ইউজার (Writer/Admin) একটি নতুন নিউজ পোস্ট তৈরি করতে পারবে।
-        স্ট্যাটাস অনুযায়ী এটি সরাসরি পাবলিশ, ড্রাফট বা শিডিউল করা যায়।
+      description: Logged-in users (Writer/Admin) can create a new news post. Depending
+        on the status, it can be published directly, saved as a draft, or scheduled.
       parameters:
       - description: Post Input (title, description, status, tags, etc.)
         in: body
@@ -590,15 +588,15 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: নতুন নিউজ পোস্ট তৈরি করা
+      summary: For creating a new post
       tags:
       - Posts
   /posts/status/{id}:
     patch:
       consumes:
       - application/json
-      description: পোস্টের স্ট্যাটাস (publish, schedule, draft) পরিবর্তন করা। শিডিউল
-        করলে সময় প্রদান বাধ্যতামূলক।
+      description: Change the post status (publish, schedule, draft). Providing a
+        schedule time is mandatory when scheduling.
       parameters:
       - description: Post ID
         in: path
@@ -621,15 +619,15 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: পোস্টের স্ট্যাটাস পরিবর্তন করা
+      summary: change post status
       tags:
       - Posts
   /posts/update/{id}:
     put:
       consumes:
       - application/json
-      description: পোস্টের লেখক বা অ্যাডমিন বিদ্যমান কোনো পোস্টের তথ্য পরিবর্তন করতে
-        পারবে।
+      description: The author of the post or an admin can modify the details of an
+        existing post.
       parameters:
       - description: Post ID
         in: path
@@ -657,7 +655,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: পোস্ট আপডেট করা
+      summary: Upgrade an existing post
       tags:
       - Posts
 securityDefinitions:

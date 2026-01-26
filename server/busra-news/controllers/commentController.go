@@ -14,8 +14,8 @@ import (
 )
 
 // CreateComment godoc
-// @Summary      নতুন কমেন্ট বা রিপ্লাই তৈরি করা
-// @Description  নিউজ পোস্টে নতুন কমেন্ট অথবা অন্য কোনো কমেন্টের আন্ডারে রিপ্লাই দেওয়া। রিপ্লাইয়ের ক্ষেত্রে parent_id প্রদান করতে হবে।
+// @Summary      create a new comment or reply
+// @Description  Add a new comment to a news post or reply under another comment. For replies, the parent_id must be provided.
 // @Tags         Comments
 // @Security     BearerAuth
 // @Accept       json
@@ -101,8 +101,8 @@ func CreateComment(c *gin.Context) {
 
 
 // EditComment godoc
-// @Summary      কমেন্ট এডিট করা
-// @Description  লগইন করা ইউজার শুধুমাত্র নিজের করা কমেন্টের কন্টেন্ট পরিবর্তন করতে পারবে।
+// @Summary      edit a comment
+// @Description  Logged-in users can only modify the content of their own comments.
 // @Tags         Comments
 // @Security     BearerAuth
 // @Accept       json
@@ -170,8 +170,8 @@ func EditComment(c *gin.Context) {
 
 
 // DeleteComment godoc
-// @Summary      কমেন্ট ডিলিট করা
-// @Description  কমেন্ট সফট ডিলিট করা হয়। শুধুমাত্র কমেন্টের লেখক অথবা অ্যাডমিন এটি ডিলিট করতে পারবে।
+// @Summary      delete a comment (soft delete)
+// @Description  Comments are soft deleted. Only the author of the comment or an admin can delete it.
 // @Tags         Comments
 // @Security     BearerAuth
 // @Param        id   path      string  true  "Comment ID"
@@ -243,8 +243,8 @@ func DeleteComment(c *gin.Context) {
 
 
 // GetPostComments godoc
-// @Summary      পোস্টের সকল কমেন্ট ও রিপ্লাই দেখা
-// @Description  একটি নির্দিষ্ট পোস্টের সকল সচল কমেন্টগুলো থ্রেডেড (Threaded) আকারে অর্থাৎ কমেন্টের নিচে রিপ্লাইসহ দেখা যাবে।
+// @Summary      get comments and replies for a post
+// @Description  Fetch all comments for a specific post along with their nested replies, structured hierarchically.
 // @Tags         Comments
 // @Produce      json
 // @Param        id   path      string  true  "Post ID"
