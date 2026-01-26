@@ -15,7 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "https://news-with-go.onrender.com",
+    "host": "news-with-go.onrender.com",
     "basePath": "/api",
     "paths": {
         "/auth/admin/delete-user/{id}": {

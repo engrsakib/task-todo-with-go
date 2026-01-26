@@ -88,7 +88,7 @@ definitions:
     - email
     - otp
     type: object
-host: https://news-with-go.onrender.com
+host: news-with-go.onrender.com
 info:
   contact:
     email: support@swagger.io

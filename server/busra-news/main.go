@@ -12,7 +12,7 @@ package main
 // @license.name  Apache 2.0
 // @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host      https://news-with-go.onrender.com
+// @host      news-with-go.onrender.com
 // @BasePath  /api
 
 // @securityDefinitions.apikey BearerAuth
